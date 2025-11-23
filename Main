@@ -238,7 +238,7 @@ def main_menu():
         elif choice == "7":
             predict_marks()
         elif choice == "8":
-            print("Exiting...")
+            print("Exiting.")
             break
         else:
             print("Invalid choice.")
