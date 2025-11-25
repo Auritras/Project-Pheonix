@@ -105,23 +105,38 @@ def login():
         add_teacher(username, password)
         print("First teacher created.")
 
+    username = input("Username: ").strip()
+
+    CUR.execute("SELECT password_hash FROM users WHERE username=%s", (username,))
+    user = CUR.fetchone()
+
+    if not user:
+        print("invalid Username.")
+        return False
+        
     for attempt in range(3):
-        username = input("Username: ").strip()
+
         password = input("Password: ").strip()
-        CUR.execute("SELECT password_hash FROM users WHERE username=%s", (username,))
-        row = CUR.fetchone()
-
-        if not row:
-            print("Invalid username.")
-            continue
-
-        if hash_password(password) == row[0]:
+               
+        if hash_password(password) == user[0]:
             print(f"Welcome, {username}")
             return True
         else:
-            print("Invalid password.")
+            print("\nIncorrect Password")
 
-    print("Too many failed attempts. Exiting.")
+            print("\n 1. Retry Password.")
+            print(" 2. Go back to access menu")
+
+            inv= int(input("\nEnter choice:"))
+            if inv == 1:
+                continue
+            if inv == 2:
+                return False
+            else:
+                print("Invalid choice.")
+                return False
+
+    print("Too many failed attempts.")
     return False
 
 def insert_student():
@@ -272,8 +287,8 @@ def start_menu():
             if login():
                 return True     
             else:
-                return False    
-        
+                continue
+                                       
         elif choice == "3":
             print("Exiting.")
             return False
