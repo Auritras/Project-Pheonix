@@ -174,7 +174,7 @@ def insert_marks():
 
     CUR.execute("SELECT id FROM students")
     students = [row[0] for row in CUR.fetchall()]
-    print("\nStudent ID's present:", ", ".join(map(str,students)) if students else "None")
+    print("\nStudent IDs present:", ", ".join(map(str,students)) if students else "None")
     
     CUR.execute("SELECT subject_name FROM subjects")
     subjects = [row[0] for row in CUR.fetchall()]
