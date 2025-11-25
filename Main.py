@@ -3,13 +3,12 @@ import mysql.connector as sqlconn
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import hashlib
-import getpass
 
 DB_CONFIG = {
     'host': 'localhost',
-    'database': 'bank',
+    'database': 'student',
     'user': 'root',
-    'password': '1809'
+    'password': '*GodUssoopp123'
 }
 
 def get_connection():
@@ -100,15 +99,15 @@ def login():
     CUR.execute("SELECT COUNT(*) FROM users")
     count = CUR.fetchone()[0]
     if count == 0:
-        print("No teachers found. Creating first teacher...")
+        print("No teachers found. Creating first teacher.")
         username = input("Choose a username: ").strip()
-        password = getpass.getpass("Choose a password: ")
+        password = input("Choose a password: ").strip()
         add_teacher(username, password)
-        print("First teacher created. Please login now.")
+        print("First teacher created.")
 
     for attempt in range(3):
         username = input("Username: ").strip()
-        password = getpass.getpass("Password: ").strip()
+        password = input("Password: ").strip()
         CUR.execute("SELECT password_hash FROM users WHERE username=%s", (username,))
         row = CUR.fetchone()
 
@@ -247,11 +246,41 @@ def main_menu():
         elif choice == "6":
             generate_pdf_report()
         elif choice == "7":
-            print("Exiting...")
+            print("Exiting.")
             break
         else:
             print("Invalid choice.")
 
+def start_menu():
+    while True:
+        
+        print("ACCESS MENU")
+        
+        print("1. Sign Up")
+        print("2. Login")
+        print("3. Exit")
+
+        choice = input("Choose an option (1-3): ")
+
+        if choice == "1":
+            username = input("Enter your username: ")
+            password = input("Enter your password: ").strip()
+            add_teacher(username, password)
+            print("Account created.")
+        
+        elif choice == "2":
+            if login():
+                return True     
+            else:
+                return False    
+        
+        elif choice == "3":
+            print("Exiting.")
+            return False
+        
+        else:
+            print("Invalid choice.")
+
 if __name__ == "__main__":   
-    if login():
+    if start_menu():
         main_menu()
