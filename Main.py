@@ -140,15 +140,21 @@ def login():
     return False
 
 def insert_student():
-    i = int(input("Enter ID: "))
-    nm = input("Enter Name: ").upper()
-    cl = input("Enter Class (e.g. XII-A): ").upper()
-    g = input("Enter Gender: ").upper()
-    h = input("Enter House: ").upper()
-    att = float(input("Enter Attendance %: "))
-    CUR.execute("INSERT INTO students VALUES (%s,%s,%s,%s,%s,%s)", (i, nm, cl, g, h, att))
-    DB.commit()
-    print("Student inserted.")
+    try:
+        i = int(input("Enter ID: "))
+        nm = input("Enter Name: ").upper()
+        cl = input("Enter Class (e.g. XII-A): ").upper()
+        g = input("Enter Gender: ").upper()
+        h = input("Enter House: ").upper()
+        att = float(input("Enter Attendance %: "))
+        CUR.execute("INSERT INTO students VALUES (%s,%s,%s,%s,%s,%s)", (i, nm, cl, g, h, att))
+        DB.commit()
+        print("Student inserted.")
+        
+    except Exception as existing:
+        print("Student ID already exists:", existing)
+
+    
 
 def insert_subject():
     subj = input("Enter Subject Name: ").upper()
@@ -165,31 +171,55 @@ def insert_exam():
     print("Exam inserted.")
 
 def insert_marks():
-    sid = int(input("Enter Student ID: "))
-    subj_name = input("Enter Subject Name: ").strip().upper()
 
-    CUR.execute("SELECT subject_id FROM subjects WHERE subject_name=%s", (subj_name,))
-    subj = CUR.fetchone()
-    if not subj:
-        print("Subject not found.")
-        return
-    subj_id = subj[0]
-
-    exam_name = input("Enter Exam Name: ").strip().upper()
-    CUR.execute("SELECT exam_id,max_written,max_practical FROM exams WHERE exam_name=%s", (exam_name,))
-    exam = CUR.fetchone()
-    if not exam:
-        print("Exam not found.")
-        return
+    CUR.execute("SELECT id FROM students")
+    students = [row[0] for row in CUR.fetchall()]
+    print("\nStudent ID's present:", ", ".join(map(str,students)) if students else "None")
     
-    exam_id, mw, mp = exam
-    w = float(input(f"Enter Written Marks (out of {mw}): "))
-    p = float(input(f"Enter Practical Marks (out of {mp}): "))
-    total = w + p
+    CUR.execute("SELECT subject_name FROM subjects")
+    subjects = [row[0] for row in CUR.fetchall()]
+    print("\nAvailable Subjects:", ", ".join(subjects) if subjects else "None")
+    
+    CUR.execute("SELECT exam_name FROM exams")
+    exams = [row[0] for row in CUR.fetchall()]
+    print("Available Exams:", ", ".join(exams) if exams else "None")
+    print()
 
-    CUR.execute("INSERT INTO marks VALUES (%s,%s,%s,%s,%s,%s)", (sid, subj_id, exam_id, w, p, total))
-    DB.commit()
-    print("Marks inserted.")
+    try:        
+        sid = int(input("Enter Student ID: "))
+        CUR.execute("SELECT id FROM students WHERE id=%s", (sid,))
+        if not CUR.fetchone():
+            print("student ID does not exist.")
+            return
+
+        subj_name = input("Enter Subject Name: ").strip().upper()
+
+        CUR.execute("SELECT subject_id FROM subjects WHERE subject_name=%s", (subj_name,))
+        subj = CUR.fetchone()
+        if not subj:
+            
+            print("Subject not found.")
+            return
+        subj_id = subj[0]
+
+        exam_name = input("Enter Exam Name: ").strip().upper()
+        CUR.execute("SELECT exam_id,max_written,max_practical FROM exams WHERE exam_name=%s", (exam_name,))
+        exam = CUR.fetchone()
+        if not exam:
+            print("Exam not found.")
+            return
+    
+        exam_id, mw, mp = exam
+        w = int(input(f"Enter Written Marks (out of {mw}): "))
+        p = int(input(f"Enter Practical Marks (out of {mp}): "))
+        total = w + p
+
+        CUR.execute("INSERT INTO marks VALUES (%s,%s,%s,%s,%s,%s)", 
+                (sid, subj_id, exam_id, w, p, total))
+        DB.commit()
+        print("Marks inserted.")
+    except Exception as existing:
+        print("Exam already exists:", existing)
 
 def show_data():
     CUR.execute("SELECT * FROM students")
