@@ -147,14 +147,15 @@ def insert_student():
         g = input("Enter Gender: ").upper()
         h = input("Enter House: ").upper()
         att = float(input("Enter Attendance %: "))
+        if att < 0 or att > 100:
+            print("Attendance must be between 0-100%")
+            return
         CUR.execute("INSERT INTO students VALUES (%s,%s,%s,%s,%s,%s)", (i, nm, cl, g, h, att))
         DB.commit()
         print("Student inserted.")
         
     except Exception as existing:
         print("Student ID already exists:", existing)
-
-    
 
 def insert_subject():
     subj = input("Enter Subject Name: ").upper()
@@ -211,7 +212,16 @@ def insert_marks():
     
         exam_id, mw, mp = exam
         w = int(input(f"Enter Written Marks (out of {mw}): "))
+
+        if w < 0 or w > mw:
+            print("Marks must be within limit")
+            return
+        
         p = int(input(f"Enter Practical Marks (out of {mp}): "))
+        if p < 0 or p > mp:
+            print("Marks must be within limit")
+            return
+    
         total = w + p
 
         CUR.execute("INSERT INTO marks VALUES (%s,%s,%s,%s,%s,%s)", 
@@ -263,6 +273,216 @@ def generate_pdf_report():
 
     print("PDF report generated as", pdf_path)
 
+def search_sid():
+    sid = input("Enter Student ID to search: ").strip()
+    CUR.execute("SELECT * FROM students WHERE id=%s", (sid,))
+    stud = CUR.fetchone()
+    if stud:
+        data = pd.DataFrame([stud], columns=["ID","Name","Class","Gender","House","Attendance"])
+        print("\nStudent Found:\n")
+        print(data)
+    else:
+        print("Student not found.")
+
+def search_sname():
+    name = "%" + input("Enter student name: ").strip().upper() + "%"
+    CUR.execute("SELECT * FROM students WHERE sname LIKE %s", (name,))
+    stud = CUR.fetchall()
+    if stud:
+        data = pd.DataFrame(stud, columns=["ID","Name","Class","Gender","House","Attendance"])
+        print("\nMatch Found:\n")
+        print(data)
+    else:
+        print("No matches Found.")
+
+def search_sclass():
+    cl = input("Enter Class: ").strip().upper()
+    CUR.execute("SELECT * FROM students WHERE sclass=%s", (cl,))
+    stud = CUR.fetchall()
+    if stud:
+           
+            data = pd.DataFrame(stud, columns=["ID","Name","Class","Gender","House","Attendance"])
+
+            print("\nStudents from", cl, "are:","\n")
+            print(data)
+    
+    else:
+        print("No students found in this class.")
+
+def search_shouse():
+    house = "%" + input("Enter House: ").strip().upper() + "%"
+    CUR.execute("SELECT * FROM students WHERE house LIKE %s", (house,))
+    stud = CUR.fetchall()
+    if stud:
+        data = pd.DataFrame(stud, columns=["ID","Name","Class","Gender","House","Attendance"])
+        print("\nStudents Found:\n")
+        print(data)
+    else:
+        print("No Students is this house.")
+
+def search_sgender():
+    gender = input("Enter Gender: ").strip().upper() 
+    CUR.execute("SELECT * FROM students WHERE gender LIKE %s", (gender,))
+    stud = CUR.fetchall()
+    if stud:
+        data = pd.DataFrame(stud, columns=["ID","Name","Class","Gender","House","Attendance"])
+        print("\nStudents Found:\n")
+        print(data)
+    else:
+        print("No Students Found")
+
+def search_menu():
+    while True:
+        print("\n--- STUDENT SEARCH MENU ---")
+        print("1. Search by ID")
+        print("2. Search by Name")
+        print("3. Search by Class")
+        print("4. Search by House")
+        print("5. Search by Gender")
+        print("6. Main Menu")
+
+        ch = input("Enter choice: ")
+
+        if ch == "1": 
+            search_sid()
+        elif ch == "2": 
+            search_sname()
+        elif ch == "3": 
+            search_sclass()
+        elif ch == "4": 
+            search_shouse()
+        elif ch == "5": 
+            search_sgender()
+        elif ch == "6": 
+            return
+        
+        else: 
+            print("Invalid choice.")
+
+def manage_menu():
+    while True:
+        print("\n--- RECORD MANAGEMENT MENU ---")
+        print("1. Update Records")
+        print("2. Delete Records")
+        print("3. Main Menu")
+
+        ch = input("Enter choice: ")
+
+        if ch == "1": 
+            update_menu()
+        elif ch == "2": 
+            delete_menu()
+        elif ch == "3":
+            return
+        
+        else:
+            print("Invalid choice.")
+
+def update_menu():
+    while True:
+        print("\n--- RECORD UPDATION MENU ---")
+        print("1. Update Student")
+        print("2. Update Subject")
+        print("3. Update Marks")
+        print("4. Update Exam")
+        print("5. Main Menu")
+
+        ch = int(input("Enter Choice:"))
+
+        if ch == "1": 
+            update_stud()
+        elif ch == "2": 
+            update_sub()
+        elif ch == "3":
+            update_marks()
+        elif ch == "4": 
+            update_Exam()
+        elif ch == "5":
+            return
+        else:
+            print("Invalid choice.")
+        
+def delete_menu():
+    while True:
+        print("\n--- RECORD DELETION MENU ---")
+        print("1. Delete Student")
+        print("2. Delete Subject")
+        print("3. Delete Marks")
+        print("4. Delete Exam")
+        print("5. Main Menu")
+
+        ch = int(input("Enter Choice:"))
+
+        if ch == "1": 
+            delete_stud()
+        elif ch == "2": 
+            delete_sub()
+        elif ch == "3":
+            delete_marks()
+        elif ch == "4": 
+            delete_Exam()
+        elif ch == "5":
+            return
+        else:
+             print("Invalid choice.")
+
+             
+def delete_stud():
+    
+    sid = input("Enter Student ID to delete: ")
+    CUR.execute("SELECT * FROM students WHERE id=%s", (sid,))
+    stud = CUR.fetchone()
+
+    if not stud:
+        print("Student not found.")
+        return
+
+    print(f"\nAre you sure you wish to dent ID {sid}?")  
+
+    ch = input("Type YES to confirm: ").upper()
+    if ch == "YES":
+        CUR.execute("DELETE FROM students WHERE id=%s", (sid,))
+        DB.commit()
+        print("Student deleted successfully.")
+    else:
+        print("Deletion Cancelled") 
+
+def delete_sub():
+
+    CUR.execute("SELECT subject_id, subject_name FROM subjects")
+    subs = CUR.fetchall()
+
+    if not subs:
+        print("No subjects have been assigned yet.")
+        return
+
+    print("\nAvailable Subjects:")
+    for sid, name in subs:
+        print(f"{sid}. {name}")
+
+    try:
+        sub_id = int(input("\nEnter Subject ID to delete: "))
+    except:
+        print("Invalid input.")
+        return
+
+    CUR.execute("SELECT * FROM subjects WHERE subject_id=%s", (sub_id,))
+    exists = CUR.fetchone()
+
+    if not exists:
+        print("Subject not found.")
+        return
+
+    print("\nAre you sure that you wish to delete this subject?.")
+    ch = input("Type YES to confirm: ").upper()
+
+    if ch == "YES":
+        CUR.execute("DELETE FROM subjects WHERE subject_id=%s", (sub_id,))
+        DB.commit()
+        print("Subject deleted.")
+    else:
+        print("Cancelled.")
+
 def main_menu():
     while True:
         print("\n==============================")
@@ -272,9 +492,10 @@ def main_menu():
         print("2. Insert Subject")
         print("3. Insert Exam")
         print("4. Insert Marks")
-        print("5. Show Data")
-        print("6. Generate PDF Report")
-        print("7. Exit")
+        print("5. Search Records")
+        print("6. Manage Records")
+        print("7. Generate PDF Report")
+        print("8. Exit")
 
         choice = input("Choose an option (1-7): ").strip()
 
@@ -287,10 +508,13 @@ def main_menu():
         elif choice == "4":
             insert_marks()
         elif choice == "5":
-            show_data()
+            search_menu()
         elif choice == "6":
-            generate_pdf_report()
+            manage_menu()
         elif choice == "7":
+            generate_pdf_report()
+                   
+        elif choice == "8":
             print("Exiting.")
             break
         else:
