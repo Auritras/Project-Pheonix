@@ -285,8 +285,10 @@ def search_sid():
         print("Student not found.")
 
 def search_sname():
-    name = "%" + input("Enter student name: ").strip().upper() + "%"
-    CUR.execute("SELECT * FROM students WHERE sname LIKE %s", (name,))
+
+    name = input("Enter student name: ").strip().upper()
+    CUR.execute("SELECT * FROM students WHERE sname LIKE %s", (f"%{name}%",))
+
     stud = CUR.fetchall()
     if stud:
         data = pd.DataFrame(stud, columns=["ID","Name","Class","Gender","House","Attendance"])
@@ -387,7 +389,7 @@ def update_menu():
         print("4. Update Exam")
         print("5. Main Menu")
 
-        ch = int(input("Enter Choice:"))
+        ch = input("Enter Choice:").strip()
 
         if ch == "1": 
             update_stud()
@@ -396,13 +398,199 @@ def update_menu():
         elif ch == "3":
             update_marks()
         elif ch == "4": 
-            update_Exam()
+            update_exam()
         elif ch == "5":
             return
         else:
             print("Invalid choice.")
-        
+
+def update_stud():
+    sid = input("Enter Student ID to update: ").strip()
+    CUR.execute("SELECT * FROM students WHERE id=%s", (sid,))
+    stud = CUR.fetchone()
+
+    if not stud:
+        print("Student not found.")
+        return
+
+    print("\nLeave field blank to keep existing value.\n")
+
+    new_name = input(f"Name ({stud[1]}): ")
+    new_name = new_name.upper() if new_name else stud[1]
+
+    new_class = input(f"Class ({stud[2]}): ")
+    new_gender = input(f"Gender ({stud[3]}): ")
+    new_house = input(f"House ({stud[4]}): ")
+
+    try:
+        inp_att = input(f"Attendance ({stud[5]}): ")
+        new_att = float(inp_att) if inp_att else stud[5]
+        if new_att < 0 or new_att > 100:
+            print("Attendance must be between 0–100%")
+            return
+    except:
+        print("Invalid attendance.")
+        return
+
+    CUR.execute("""UPDATE students SET sname=%s, sclass=%s, gender=%s, house=%s, attendance=%s WHERE id=%s""", 
+                (new_name, new_class, new_gender, new_house, new_att, sid))
+
+    DB.commit()
+    print("\nStudent updated successfully.")
+
+def update_sub():
+
+    CUR.execute("SELECT subject_id, subject_name FROM subjects")
+    subj = CUR.fetchall()
+
+    if not subj:
+        print("No subjects available.")
+        return
+
+    print("\nAvailable Subjects:")
+    for sid, name in subj:
+        print(f"{sid}. {name}")
+
+    try:
+        sub_id = int(input("\nEnter Subject ID to update: "))
+    except:
+        print("Invalid input.")
+        return
+
+    CUR.execute("SELECT subject_name FROM subjects WHERE subject_id=%s", (sub_id,))
+    valid = CUR.fetchone()
+
+    if not valid:
+
+        print("Subject not found.")
+        return
+
+    new_name = input(f"New Subject Name ({valid[0]}): ")
+
+    CUR.execute("UPDATE subjects SET subject_name=%s WHERE subject_id=%s",
+                (new_name, sub_id))
+    DB.commit()
+
+    print("Subject updated successfully.")
+
+def update_marks():
+
+    sid = input("Enter Student ID: ")
+
+    CUR.execute("SELECT sname FROM students WHERE id=%s", (sid,))
+    stud = CUR.fetchone()
+    if not stud:
+        print("Student not found.")
+        return
+
+    print(f"\nMarks to be updated for {stud[0]} (ID: {sid})")
+
+    CUR.execute("""SELECT m.subject_id, sub.subject_name, m.exam_id, e.exam_name, m.written, m.practical 
+        FROM marks m JOIN subjects sub ON sub.subject_id = m.subject_id JOIN exams e ON e.exam_id = m.exam_id WHERE m.id=%s""", (sid,))
+    
+    all_marks = CUR.fetchall()
+
+    if not all_marks:
+        print("No marks found for this student.")
+        return
+
+    print("\nAvailable Marks:")
+    for sub_id, sub_name, exam_id, exam_name, w, p in all_marks:
+        print(f"Subject: {sub_name}  Exam: {exam_name}  Written={w}  Practical={p}")
+
+    sub = input("\nEnter Subject Name: ")
+
+    CUR.execute("SELECT subject_id FROM subjects WHERE subject_name=%s", (sub,))
+    data1 = CUR.fetchone()
+
+    exam = input("Enter Exam Name: ")
+
+    CUR.execute("SELECT exam_id, max_written, max_practical FROM exams WHERE exam_name=%s", (exam,))
+    data2 = CUR.fetchone()
+
+    if not data1 or not data2:
+        print("Invalid subject or exam.")
+        return
+
+    subj_id = data1[0]
+    exam_id, mw, mp = data2
+
+    CUR.execute("SELECT written, practical FROM marks WHERE id=%s AND subject_id=%s AND exam_id=%s", (sid, subj_id, exam_id))
+
+    mark = CUR.fetchone()
+    if not mark:
+        print("Marks not found.")
+        return
+
+    print(f"\nOld Written={mark[0]}, Old Practical={mark[1]}")
+
+    try:
+        new_w = input(f"New Written (out of {mw}): ").strip()
+        new_w = float(new_w) if new_w else mark[0]
+
+        new_p = input(f"New Practical (out of {mp}): ").strip()
+        new_p = float(new_p) if new_p else mark[1]
+    except:
+        print("Invalid marks.")
+        return
+
+    total = new_w + new_p
+
+    CUR.execute("""UPDATE marks SET written=%s, practical=%s, total=%s WHERE id=%s AND subject_id=%s AND exam_id=%s
+    """, (new_w, new_p, total, sid, subj_id, exam_id))
+
+    DB.commit()
+    print("Marks updated successfully.")
+
+def update_exam():
+
+    CUR.execute("SELECT exam_id, exam_name, max_written, max_practical FROM exams")
+    exams = CUR.fetchall()
+
+    if not exams:
+        print("No exams available.")
+        return
+
+    print("\nAvailable Exams:")
+    for eid, name, mw, mp in exams:
+        print(f"{eid}. {name} (Written: {mw}, Practical: {mp})")
+
+    try:
+        exam_id = int(input("\nEnter Exam ID to update: "))
+    except:
+        print("Invalid input.")
+        return
+
+    CUR.execute("SELECT exam_name, max_written, max_practical FROM exams WHERE exam_id=%s", (exam_id,))
+    data = CUR.fetchone()
+
+    if not data:
+        print("Exam not found.")
+        return
+    
+    old_name, old_mw, old_mp = data    
+
+
+    new_name = input(f"Exam Name ({old_name}): ")
+    try:
+        new_mw = input(f"Max Written ({old_mw}): ")
+        new_mw = float(new_mw) if new_mw else old_mw
+
+        new_mp = input(f"Max Practical ({old_mp}): ")
+        new_mp = float(new_mp) if new_mp else old_mp
+    except:
+        print("Invalid marks.")
+        return
+
+    CUR.execute("""UPDATE exams SET exam_name=%s, max_written=%s, max_practical=%s 
+        WHERE exam_id=%s""", (new_name, new_mw, new_mp, exam_id))
+    DB.commit()
+
+    print("Exam updated successfully.")
+
+
 def delete_menu():
+
     while True:
         print("\n--- RECORD DELETION MENU ---")
         print("1. Delete Student")
@@ -411,7 +599,7 @@ def delete_menu():
         print("4. Delete Exam")
         print("5. Main Menu")
 
-        ch = int(input("Enter Choice:"))
+        ch = input("Enter Choice:")
 
         if ch == "1": 
             delete_stud()
@@ -420,7 +608,7 @@ def delete_menu():
         elif ch == "3":
             delete_marks()
         elif ch == "4": 
-            delete_Exam()
+            delete_exam()
         elif ch == "5":
             return
         else:
@@ -437,7 +625,7 @@ def delete_stud():
         print("Student not found.")
         return
 
-    print(f"\nAre you sure you wish to dent ID {sid}?")  
+    print(f"\nAre you sure you wish to delete student {sid}?")  
 
     ch = input("Type YES to confirm: ").upper()
     if ch == "YES":
@@ -480,6 +668,79 @@ def delete_sub():
         CUR.execute("DELETE FROM subjects WHERE subject_id=%s", (sub_id,))
         DB.commit()
         print("Subject deleted.")
+    else:
+        print("Cancelled.")
+
+def delete_marks():
+    sid = input("Enter Student ID: ")
+    
+    CUR.execute("SELECT sname FROM students WHERE id=%s", (sid,))
+    if not CUR.fetchone():
+        print("Student not found.")
+        return
+
+    sub = input("Enter Subject Name: ").upper()
+
+    CUR.execute("SELECT subject_id FROM subjects WHERE subject_name=%s", (sub,))
+    data1 = CUR.fetchone()
+
+    exam = input("Enter Exam Name: ").upper()
+    
+    CUR.execute("SELECT exam_id FROM exams WHERE exam_name=%s", (exam,))
+    data2= CUR.fetchone()
+
+    if not data1 or not data2:
+        print("Invalid subject or exam.")
+        return
+
+    subj_id, exam_id = data1[0], data2[0]
+
+    CUR.execute("SELECT * FROM marks WHERE id=%s AND subject_id=%s AND exam_id=%s", (sid, subj_id, exam_id))
+    
+    if not CUR.fetchone():
+        print("Marks not found.")
+        return
+
+    confirm = input("Type YES to delete these marks: ").upper()
+    if confirm == "YES":
+        CUR.execute("DELETE FROM marks WHERE id=%s AND subject_id=%s AND exam_id=%s", (sid, subj_id, exam_id))
+        DB.commit()
+        print("Marks deleted.")
+    else:
+        print("Cancelled.")
+
+def delete_exam():
+    CUR.execute("SELECT exam_id, exam_name FROM exams")
+    exams = CUR.fetchall()
+
+    if not exams:
+        print("No exam conducted.")
+        return
+
+    print("\nAvailable Exams:")
+    for eid, name in exams:
+        print(f"{eid}. {name}")
+
+    try:
+        exam_id = int(input("\nEnter Exam ID to delete: "))
+    except:
+        print("Invalid input.")
+        return
+
+    CUR.execute("SELECT * FROM exams WHERE exam_id=%s", (exam_id,))
+    exists = CUR.fetchone()
+
+    if not exists:
+        print("Exam not found.")
+        return
+
+    print("\nAre you sure that you wish to delete this Exam?")
+    c = input("Type YES to confirm: ").upper()
+
+    if c == "YES":
+        CUR.execute("DELETE FROM exams WHERE exam_id=%s", (exam_id,))
+        DB.commit()
+        print("Exam deleted.")
     else:
         print("Cancelled.")
 
