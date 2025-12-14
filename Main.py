@@ -133,8 +133,8 @@ def login():
             if inv == 2:
                 return False
             else:
-                print("Invalid choice.")
-                return False
+                print("Invalid choice.Try again.")
+                continue
 
     print("Too many failed attempts.")
     return False
@@ -228,8 +228,8 @@ def insert_marks():
                 (sid, subj_id, exam_id, w, p, total))
         DB.commit()
         print("Marks inserted.")
-    except Exception as existing:
-        print("Exam already exists:", existing)
+    except Exception as e:
+        print("Error while inserting marks:", e)
 
 def show_data():
     CUR.execute("SELECT * FROM students")
@@ -238,40 +238,95 @@ def show_data():
     print(df)
 
 def generate_pdf_report():
+    from datetime import datetime
+    import os
+
+    os.makedirs("reports", exist_ok=True)
+
+    pdf_path = f"reports/student_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+
     CUR.execute("""
         SELECT s.id, s.sname, s.sclass, sub.subject_name, e.exam_name,
-               m.written, m.practical, m.total 
-        FROM marks m 
-        JOIN students s ON s.id=m.id 
-        JOIN subjects sub ON sub.subject_id=m.subject_id 
-        JOIN exams e ON e.exam_id=m.exam_id 
+               m.written, m.practical, m.total
+        FROM marks m
+        JOIN students s ON s.id = m.id
+        JOIN subjects sub ON sub.subject_id = m.subject_id
+        JOIN exams e ON e.exam_id = m.exam_id
         ORDER BY s.id
     """)
-    data = CUR.fetchall()
 
-    if not data:
+    rows = CUR.fetchall()
+    if not rows:
         print("No data found.")
         return
 
-    df = pd.DataFrame(data, columns=["ID","Name","Class","Subject","Exam","Written","Practical","Total"])
-    pdf_path = "student_report.pdf"
+    df = pd.DataFrame(
+        rows,
+        columns=["ID", "Name", "Class", "Subject", "Exam", "Written", "Practical", "Total"]
+    )
 
     with PdfPages(pdf_path) as pdf:
         for sid, group in df.groupby("ID"):
-            fig, ax = plt.subplots(figsize=(8,5))
-            ax.axis("tight")
+            fig, ax = plt.subplots(figsize=(8.27, 11.69))  
             ax.axis("off")
-            table_data = group[["Subject","Exam","Written","Practical","Total"]].values.tolist()
-            table = ax.table(cellText=table_data,
-                             colLabels=["Subject","Exam","Written","Practical","Total"],
-                             loc="center")
-            table.auto_set_font_size(False)
-            table.set_fontsize(8)
-            plt.title(f"Student ID: {sid} | Name: {group.iloc[0]['Name']} | Class: {group.iloc[0]['Class']}")
-            pdf.savefig()
-            plt.close()
 
-    print("PDF report generated as", pdf_path)
+            
+            ax.text(
+                0.5, 0.96,
+                "STUDENT ACADEMIC REPORT",
+                ha="center",
+                fontsize=18,
+                fontweight="bold")
+
+            student_class = group.iloc[0]["Class"] if group.iloc[0]["Class"] else "N/A"
+
+        
+            ax.text(
+                0.05, 0.90,
+                f"Student Name : {group.iloc[0]['Name']}\n"
+                f"Student ID   : {sid}\n"
+                f"Class        : {student_class}",
+                fontsize=11,
+                va="top")
+
+          
+            table_data = group[
+                ["Subject", "Exam", "Written", "Practical", "Total"]].values.tolist()
+
+            table = ax.table(
+                cellText=table_data,
+                colLabels=["Subject", "Exam", "Written", "Practical", "Total"],
+                cellLoc="center",
+                bbox=[0.03, 0.44, 0.94, 0.28])
+
+            table.auto_set_font_size(False)
+            table.set_fontsize(10)
+            table.scale(1.05, 0.85)
+
+            for (row, col), cell in table.get_celld().items():
+                if row == 0:
+                    cell.set_text_props(weight="bold", color="white")
+                    cell.set_facecolor("#2C3E50")
+                else:
+                    cell.set_facecolor("#F2F2F2" if row % 2 == 0 else "white")
+
+            total_marks = group["Total"].sum()
+            ax.text(0.5, 0.34,
+                f"Total Marks Obtained : {total_marks}",
+                ha="center",
+                fontsize=13,
+                fontweight="bold",
+                fontfamily="Times New Roman")
+                
+            ax.text(0.05, 0.20, "Guardian Signature: _______________", fontsize=10)
+            ax.text(0.60, 0.20, "Principal Signature: _____________", fontsize=10)
+
+            pdf.savefig(fig)
+            plt.close(fig)
+
+    print("Final PDF generated successfully:", pdf_path)
+
+
 
 def search_sid():
     sid = input("Enter Student ID to search: ").strip()
@@ -389,7 +444,7 @@ def update_menu():
         print("4. Update Exam")
         print("5. Main Menu")
 
-        ch = input("Enter Choice:").strip()
+        ch = int(input("Enter Choice:"))
 
         if ch == "1": 
             update_stud()
@@ -599,7 +654,7 @@ def delete_menu():
         print("4. Delete Exam")
         print("5. Main Menu")
 
-        ch = input("Enter Choice:")
+        ch = int(input("Enter Choice:"))
 
         if ch == "1": 
             delete_stud()
@@ -758,7 +813,7 @@ def main_menu():
         print("7. Generate PDF Report")
         print("8. Exit")
 
-        choice = input("Choose an option (1-7): ").strip()
+        choice = input("Choose an option (1-8): ").strip()
 
         if choice == "1":
             insert_student()
@@ -814,3 +869,5 @@ def start_menu():
 if __name__ == "__main__":   
     if start_menu():
         main_menu()
+
+
