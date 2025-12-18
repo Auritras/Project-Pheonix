@@ -8,7 +8,7 @@ DB_CONFIG = {
     'host': 'localhost',
     'database': 'student',
     'user': 'root',
-    'password': '*GodUssoopp123'
+    'password': 'ABC'
 }
 
 def get_connection():
